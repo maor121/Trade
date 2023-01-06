@@ -4,21 +4,20 @@ import os
 import pandas as pd
 import facebook_scraper as f
 
-DATA_DIR = "./data"
-MAX_DAYS_BACK = 2
-MAX_POSTS = 40
+from config import DATA_DIR, MAX_DAYS_BACK, MAX_POSTS
 
-if __name__ == '__main__':
+
+def scrape_facebook_posts():
     os.makedirs(DATA_DIR, exist_ok=True)
 
     f.enable_logging()
 
     # TLV
-    #group_id = '1738501973091783'   #public
-    #group_id = '101875683484689'    #private
+    # group_id = '1738501973091783'   #public
+    # group_id = '101875683484689'    #private
 
     # Givataym
-    group_id = '1424244737803677'   # public
+    group_id = '1424244737803677'  # public
     # group_id = '186810449287215'    # public
 
     result_dict = {}
@@ -30,7 +29,7 @@ if __name__ == '__main__':
             f.get_posts(group=group_id, options={"allow_extra_requests": False},
                         max_past_limit=2,
                         latest_date=datetime.datetime.now() -
-                        datetime.timedelta(days=MAX_DAYS_BACK))):
+                                    datetime.timedelta(days=MAX_DAYS_BACK))):
         print("---------------------------------------")
         print("[Post_Num] %d" % post_num)
         print("---------------------------------------")
@@ -55,3 +54,12 @@ if __name__ == '__main__':
     result_df.to_csv('%s.csv' % basename)
     result_df.to_excel('%s.xlsx' % basename)
 
+
+def scrape_street_names():
+    # https://data.gov.il/dataset/israel-streets-synom
+    pass
+
+
+if __name__ == '__main__':
+    # scrape_facebook_posts()
+    scrape_street_names()

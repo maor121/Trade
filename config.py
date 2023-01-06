@@ -1,0 +1,3 @@
+DATA_DIR = "./data"
+MAX_DAYS_BACK = 100
+MAX_POSTS = 400
