@@ -68,10 +68,26 @@ class LocExtractor:
                             continue
 
                         matches.add((a, s_name))
+        matches0 = [("רחוב", m[1]) for m in matches if m[0] == "רחוב!"]
+        matches1 = [("רחוב", m[1]) for m in matches if m[0] == "רחוב?"]
+        matches2 = [("רחוב", m[1]) for m in matches if m[0] == None]
+        matches3 = [("שכונה", m[1]) for m in matches if m[0] == "שכונה"]
+        if len(matches0) > 0:
+            filtered_matches = matches0
+        elif len(matches1) > 0:
+            filtered_matches = matches1
+        elif len(matches2) > 0:
+            filtered_matches = matches2
+        elif len(matches3) > 0:
+            filtered_matches = matches3
+        else:
+            filtered_matches = []
         print("----")
         print("Text: %s" % post_text)
         if len(matches) > 0:
             print("Matches: %s" % matches)
+            if len(filtered_matches) > 0:
+                print("Filtered matches: %s" % filtered_matches)
         else:
             print("No Matches")
         print("----")
