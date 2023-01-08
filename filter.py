@@ -4,6 +4,13 @@ import os
 import pandas as pd
 
 from config import DATA_DIR
+import numpy as np
+
+
+def normalize_str(s):
+    return s.replace(".", "").replace(",", "").\
+            replace("\"", "").\
+            replace("'", "").replace("׳","").strip()
 
 
 class LocExtractor:
@@ -13,8 +20,9 @@ class LocExtractor:
         # Ramat Gan / Givataym
         city_df = loc_df[loc_df['city_code'].isin([6300, 8600])]
 
-        self.street_names = set([c.strip() for c in city_df['street_name']])
-        self.street_names -= {"גבעתיים"}
+        self.street_names = set([normalize_str(c)
+                                 for c in city_df['street_name']])
+        self.street_names -= {"גבעתיים", "רמת גן"}
 
         con_words = ["ל", "ב"]
         self.street_names.update(
@@ -24,17 +32,22 @@ class LocExtractor:
     def __call__(self, df_row):
         post_text = str(df_row['text'])
 
-        post_text = post_text.replace(".", "").replace(",", "").\
-            replace("\"", "").\
-            replace("'", "").replace("׳","")
-        post_words = post_text.split()  # use space as separator. Consider ntk
+        post_text = normalize_str(post_text)
+        post_words = np.array(post_text.split())  # use space as separator. Consider ntk
 
         # TODO: 2-3 words matches
-        matches = []
-        for w in post_words:
-            if w in self.street_names:
-               matches.append(w)
-
+        matches = set()
+        for s_name in self.street_names:
+            s_name_split = s_name.split()
+            s_name_w0 = s_name_split[0]
+            s_name_w_indices = np.argwhere(s_name_w0 == post_words)
+            for s_name_w_idx in s_name_w_indices:
+                is_match = all([
+                    (i + s_name_w_idx < len(post_words)) and (
+                                s_name_wi == post_words[i + s_name_w_idx])
+                    for i, s_name_wi in enumerate(s_name_split)])
+                if is_match:
+                    matches.add(s_name)
         print("----")
         print("Text: %s" % post_text)
         if len(matches) > 0:
