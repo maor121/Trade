@@ -1,8 +1,11 @@
 import datetime
 import os
 
+import lxml
 import pandas as pd
 import facebook_scraper as f
+import requests
+from lxml import etree
 
 from config import DATA_DIR, MAX_DAYS_BACK, MAX_POSTS
 
@@ -49,15 +52,29 @@ def scrape_facebook_posts():
             break
 
     result_df = pd.DataFrame.from_dict(result_dict, orient='columns')
-    basename = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+    basename = datetime.datetime.now().strftime("Posts_%m-%d-%Y_%H-%M-%S")
     basename = os.path.join(DATA_DIR, basename)
     result_df.to_csv('%s.csv' % basename)
     result_df.to_excel('%s.xlsx' % basename)
 
 
 def scrape_street_names():
+    # manually download from:
     # https://data.gov.il/dataset/israel-streets-synom
     pass
+
+    # Scraper: not working, since page load dynamiclly
+
+    # from bs4 import BeautifulSoup
+    # page_url = "https://data.gov.il/dataset/israel-streets-synom"
+    # page_content = requests.get(page_url).text
+    # soup = BeautifulSoup(page_content, "html.parser")
+    # # feed_container = soup.find(id="m_group_stories_container").find_all(
+    # #     "p")
+    # # for i in feed_container:
+    # #     print(i.text)
+    # dom = etree.HTML(str(soup))
+    # dom.xpath('//*[@id="dataset-resources"]')
 
 
 if __name__ == '__main__':
