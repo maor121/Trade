@@ -14,14 +14,27 @@ class LocExtractor:
         city_df = loc_df[loc_df['city_code'].isin([6300, 8600])]
 
         self.street_names = set([c.strip() for c in city_df['street_name']])
+        self.street_names -= {"גבעתיים"}
+
+        con_words = ["ל", "ב"]
+        self.street_names.update(
+            [cw+c for cw in con_words for c in self.street_names]
+        )
 
     def __call__(self, df_row):
         post_text = str(df_row['text'])
+
+        post_text = post_text.replace(".", "").replace(",", "").\
+            replace("\"", "").\
+            replace("'", "").replace("׳","")
         post_words = post_text.split()  # use space as separator. Consider ntk
+
+        # TODO: 2-3 words matches
         matches = []
         for w in post_words:
             if w in self.street_names:
                matches.append(w)
+
         print("----")
         print("Text: %s" % post_text)
         if len(matches) > 0:
