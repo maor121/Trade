@@ -6,8 +6,30 @@ import pandas as pd
 from config import DATA_DIR
 
 
-def extract_location(df_row):
-    return None
+class LocExtractor:
+    def __init__(self, loc_df):
+        self.loc_df = loc_df
+
+        # Ramat Gan / Givataym
+        city_df = loc_df[loc_df['city_code'].isin([6300, 8600])]
+
+        self.street_names = set([c.strip() for c in city_df['street_name']])
+
+    def __call__(self, df_row):
+        post_text = str(df_row['text'])
+        post_words = post_text.split()  # use space as separator. Consider ntk
+        matches = []
+        for w in post_words:
+            if w in self.street_names:
+               matches.append(w)
+        print("----")
+        print("Text: %s" % post_text)
+        if len(matches) > 0:
+            print("Matches: %s" % matches)
+        else:
+            print("No Matches")
+        print("----")
+        return None
 
 
 def find_latest_csv(csv_glob_inp: str):
@@ -22,7 +44,7 @@ if __name__ == "__main__":
     loc_df = pd.read_csv(find_latest_csv("%s/Streets_*.csv" % DATA_DIR))
     posts_df = pd.read_csv(find_latest_csv("%s/Posts_*.csv" % DATA_DIR))
 
-    posts_df['location'] = posts_df.apply(extract_location, axis=1)
+    posts_df['location'] = posts_df.apply(LocExtractor(loc_df), axis=1)
 
     print(loc_df.head())
     print(posts_df.head())
