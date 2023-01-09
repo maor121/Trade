@@ -30,4 +30,4 @@ if __name__ == "__main__":
             res_df_dict["street"].append(v)
 
     res_df = pd.DataFrame.from_dict(res_df_dict)
-    res_df.to_csv("data/Giva_Neighberhoods.csv")
+    res_df.to_csv("data/Giva_Neighberhoods.csv", index=None)

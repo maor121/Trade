@@ -80,6 +80,7 @@ def scrape_street_names():
 
 def scrape_neighberhoods():
     # https://www.givatayim.muni.il/979/
+    # https://zips.co.il/city/%D7%A8%D7%9E%D7%AA-%D7%92%D7%9F/8600
     pass
 
 

@@ -31,7 +31,7 @@ class LocExtractor:
 
         self.neighberhood_by_street = {}
         for __, row in neighber_df.iterrows():
-            self.neighberhood_by_street['גבעתיים',
+            self.neighberhood_by_street[row['city'],
                 normalize_str(row['street'])] = \
                 normalize_str(row['neighberhood'])
 
@@ -133,7 +133,12 @@ def find_latest_csv(csv_glob_inp: str):
 if __name__ == "__main__":
     loc_df = pd.read_csv(find_latest_csv("%s/Streets_*.csv" % DATA_DIR))
     posts_df = pd.read_csv(find_latest_csv("%s/Posts_*.csv" % DATA_DIR))
-    neighber_df = pd.read_csv("%s/Giva_Neighberhoods.csv" % DATA_DIR)
+
+    neighber_giva_df = pd.read_csv("%s/Giva_Neighberhoods.csv" % DATA_DIR)
+    neighber_giva_df['city'] = ["גבעתיים"] * len(neighber_giva_df)
+    neighber_rg_df = pd.read_csv("%s/RG_Neighberhoods.csv" % DATA_DIR)
+    neighber_rg_df['city'] = ["רמת גן"] * len(neighber_rg_df)
+    neighber_df = pd.concat([neighber_rg_df, neighber_giva_df])
 
     posts_df['location'] = posts_df.apply(LocExtractor(loc_df,
                                                        neighber_df), axis=1)
