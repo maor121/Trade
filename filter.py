@@ -11,7 +11,7 @@ def normalize_str(s):
     return s.replace(".", "").replace(",", "").\
             replace("\"", "").\
             replace("'", "").replace("׳","").replace(":","").\
-            replace(")", "").replace("(", "").strip()
+            replace(")", "").replace("(", "").replace("\u200b","").strip()
 
 
 class LocExtractor:
@@ -31,9 +31,17 @@ class LocExtractor:
 
         self.neighberhood_by_street = {}
         for __, row in neighber_df.iterrows():
-            self.neighberhood_by_street[row['city'],
-                normalize_str(row['street'])] = \
-                normalize_str(row['neighberhood'])
+            key = normalize_str(row['city']), normalize_str(row['street'])
+            if key not in self.neighberhood_by_street:
+                self.neighberhood_by_street[key] = set()
+
+            self.neighberhood_by_street[key].add(
+                normalize_str(row['neighberhood']))
+
+        # only frozensets are hashable in python
+        for key in self.neighberhood_by_street.keys():
+            self.neighberhood_by_street[key] = frozenset(
+                self.neighberhood_by_street[key])
 
     def __call__(self, df_row):
         post_text = str(df_row['text'])
@@ -80,7 +88,8 @@ class LocExtractor:
 
                         matches.add((a, s_name, c_name,
                                      self.neighberhood_by_street.get(
-                                         (c_name, s_name))))
+                                         (c_name, s_name))
+                                     ))
         matches0 = [("רחוב", m[1], m[2], m[3]) for m in matches if m[0] == "רחוב!"]
         matches1 = [("רחוב", m[1], m[2], m[3]) for m in matches if m[0] == "רחוב?"]
         matches2 = [("רחוב", m[1], m[2], m[3]) for m in matches if m[0] == None]
@@ -134,11 +143,35 @@ if __name__ == "__main__":
     loc_df = pd.read_csv(find_latest_csv("%s/Streets_*.csv" % DATA_DIR))
     posts_df = pd.read_csv(find_latest_csv("%s/Posts_*.csv" % DATA_DIR))
 
+    neighber_df_dict = {'city': [], 'neighberhood': [], 'street': []}
+
     neighber_giva_df = pd.read_csv("%s/Giva_Neighberhoods.csv" % DATA_DIR)
     neighber_giva_df['city'] = ["גבעתיים"] * len(neighber_giva_df)
     neighber_rg_df = pd.read_csv("%s/RG_Neighberhoods.csv" % DATA_DIR)
     neighber_rg_df['city'] = ["רמת גן"] * len(neighber_rg_df)
-    neighber_df = pd.concat([neighber_rg_df, neighber_giva_df])
+    for __, row in pd.concat([neighber_rg_df, neighber_giva_df]).iterrows():
+        neighber_df_dict['city'].append(normalize_str(row['city']))
+        neighber_df_dict['street'].append(normalize_str(row['street']))
+        neighber_df_dict['neighberhood'].append(normalize_str(row['neighberhood']))
+
+    neighber_df_2008 = pd.read_csv("%s/Israel_statisticalAreas2008_neighborhoods.csv" % DATA_DIR)
+    neighber_df_2008 = neighber_df_2008.fillna("")
+    for __, row in neighber_df_2008.iterrows():
+        city = row['שם יישוב']
+        neighberhood = row['שמות שכונות מרכזיות']
+        if neighberhood == 'אין שם שכונה באזור סטטיסטי זה':
+            continue
+
+        streets = row['שמות רחובות מרכזיים'].split(",")
+        for street in streets:
+            street = street.strip()
+            if len(street) == 0:
+                continue
+
+            neighber_df_dict['city'].append(normalize_str(city))
+            neighber_df_dict['neighberhood'].append(normalize_str(neighberhood))
+            neighber_df_dict['street'].append(normalize_str(street))
+    neighber_df = pd.DataFrame.from_dict(neighber_df_dict)
 
     posts_df['location'] = posts_df.apply(LocExtractor(loc_df,
                                                        neighber_df), axis=1)
