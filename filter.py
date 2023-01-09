@@ -5,7 +5,7 @@ import pandas as pd
 
 from config import DATA_DIR
 import numpy as np
-
+import googlemaps
 
 def normalize_str(s):
     return s.replace(".", "").replace(",", "").\
@@ -35,7 +35,7 @@ class Location:
                 return False
         return True
 
-    def __repr__(self):
+    def __str__(self):
         res = "%s, ישראל" % self.city
         if self.street and not self.street_num:
             res = "%s, %s" % ("רחוב " + self.street, res)
@@ -43,6 +43,10 @@ class Location:
             res = "רחוב %s מספר %d, %s" % (self.street, self.street_num, res)
         else:
             res = "שכונת %s, %s" % (self.neighberhood, res)
+        return res
+
+    def __repr__(self):
+        res = str(self)
 
         res = "Loc[%s]" % res
         return res
@@ -162,7 +166,7 @@ class LocExtractor:
         else:
             print("No Matches")
         print("----")
-        return None
+        return filtered_matches
 
 
 def find_latest_csv(csv_glob_inp: str):
@@ -173,10 +177,43 @@ def find_latest_csv(csv_glob_inp: str):
     return latest_csv_file
 
 
+class DistExtractor:
+    def __init__(self, API_KEY: str, org_st: str):
+        self.gmaps = googlemaps.Client(key=API_KEY)
+        self.org_loc = self.gmaps.geocode(org_st)[0]
+
+    def __call__(self, df_row):
+        post_locs = df_row['location']
+
+        org_lat_lng = DistExtractor.extract_lat_lng(self.org_loc)
+        dist_min = np.inf
+        for post_loc in post_locs:
+            post_loc_lat_lng = self.gmaps.geocode(post_loc)[0]
+            post_loc_lat_lng = DistExtractor.extract_lat_lng(post_loc_lat_lng)
+            dist = self.gmaps.distance_matrix(org_lat_lng, post_loc_lat_lng,
+                                              mode='walking')
+            dist_meters = dist['rows'][0]['elements'][0]['distance']['value']
+            if dist_meters < dist_min:
+                dist_min = dist_meters
+
+        return dist_min
+
+    @staticmethod
+    def extract_lat_lng(gmap_loc):
+        gmap_loc = gmap_loc['geometry']['location']
+        return gmap_loc['lat'], gmap_loc['lng']
+
+
 if __name__ == "__main__":
+    GOOGLE_API_KEY = "KEY"
+
     loc_df = pd.read_csv(find_latest_csv("%s/Streets_*.csv" % DATA_DIR))
     posts_df = pd.read_csv(find_latest_csv("%s/Posts_*.csv" % DATA_DIR))
     posts_df['location'] = posts_df.apply(LocExtractor(loc_df), axis=1)
+    posts_df['min_distance[m]'] = posts_df.apply(
+        DistExtractor(GOOGLE_API_KEY, "רחוב כצלנסון, גבעתיים, ישראל"), axis=1)
 
     print(loc_df.head())
     print(posts_df.head())
+
+    posts_df.to_csv("Result.csv", index=False)
