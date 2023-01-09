@@ -61,6 +61,8 @@ def scrape_facebook_posts():
 def scrape_street_names():
     # manually download from:
     # https://data.gov.il/dataset/israel-streets-synom
+
+    # neigberhoods? http://www.diva-gis.org/datadown (note license)
     pass
 
     # Scraper: not working, since page load dynamiclly
@@ -75,6 +77,10 @@ def scrape_street_names():
     # #     print(i.text)
     # dom = etree.HTML(str(soup))
     # dom.xpath('//*[@id="dataset-resources"]')
+
+def scrape_neighberhoods():
+    # https://www.givatayim.muni.il/979/
+    pass
 
 
 if __name__ == '__main__':
