@@ -14,34 +14,61 @@ def normalize_str(s):
             replace(")", "").replace("(", "").replace("\u200b","").strip()
 
 
+class Location:
+    def __init__(self, city: str, street: str=None, street_num: int=None,
+                 neighberhood: str=None):
+        self.city = city
+        self.street = street
+        self.street_num = street_num
+        self.neighberhood = neighberhood
+
+    def __hash__(self):
+        sorted_keys = sorted(self.__dict__.keys())
+        return hash(
+            tuple([self.__dict__[k] for k in sorted_keys]))
+
+    def __eq__(self, other):
+        if not isinstance(other, Location):
+            return False
+        for k in self.__dict__.keys():
+            if self.__dict__[k] != other.__dict__[k]:
+                return False
+        return True
+
+    def __repr__(self):
+        res = "%s, ישראל" % self.city
+        if self.street and not self.street_num:
+            res = "%s, %s" % ("רחוב " + self.street, res)
+        elif self.street and self.street_num:
+            res = "רחוב %s מספר %d, %s" % (self.street, self.street_num, res)
+        else:
+            res = "שכונת %s, %s" % (self.neighberhood, res)
+
+        res = "Loc[%s]" % res
+        return res
+
+
 class LocExtractor:
-    def __init__(self, loc_df, neighber_df):
+    def __init__(self, loc_df):
         self.loc_df = loc_df
 
         # Ramat Gan / Givataym
         city_df = loc_df[loc_df['city_code'].isin([6300, 8600])]
         self.city_names = set([normalize_str(c) for c in city_df['city_name']])
 
-        self.street_names = set([(normalize_str(city), normalize_str(street))
+        self.street_names = set([("S",normalize_str(city), normalize_str(street))
                                  for city, street in
                                  zip(city_df['city_name'],
                                      city_df['street_name'])
                                  if normalize_str(street) not in
-                                 self.city_names])
+                                 self.city_names and not
+                                 normalize_str(street).startswith('שכ ')])
 
-        self.neighberhood_by_street = {}
-        for __, row in neighber_df.iterrows():
-            key = normalize_str(row['city']), normalize_str(row['street'])
-            if key not in self.neighberhood_by_street:
-                self.neighberhood_by_street[key] = set()
-
-            self.neighberhood_by_street[key].add(
-                normalize_str(row['neighberhood']))
-
-        # only frozensets are hashable in python
-        for key in self.neighberhood_by_street.keys():
-            self.neighberhood_by_street[key] = frozenset(
-                self.neighberhood_by_street[key])
+        self.neighberhood_names = set([("N",normalize_str(city), normalize_str(street).replace("שכ ",""))
+                                 for city, street in
+                                 zip(city_df['city_name'],
+                                     city_df['street_name'])
+                                 if normalize_str(street).startswith("שכ ")])
 
     def __call__(self, df_row):
         post_text = str(df_row['text'])
@@ -50,9 +77,15 @@ class LocExtractor:
         post_words = np.array(post_text.split())  # use space as separator. Consider ntk
 
         # TODO: 2-3 words matches
-        matches = set()
+        matches0, matches1, matches2 = set(), set(), set()
+        matchesN = set()
+
         con_words = ["","ל","ב"]
-        for c_name, s_name in self.street_names:
+        for t, c_name, s_name in self.street_names.union(self.neighberhood_names):
+
+            is_neighberhood = t == "N"
+            is_street = t == "S"
+
             for con_w in con_words:
                 s_name_con = con_w + s_name
                 s_name_split = s_name_con.split()
@@ -65,7 +98,7 @@ class LocExtractor:
                         for i, s_name_wi in enumerate(s_name_split)])
                     if is_match:
                         s = set(["רחוב", "ברחוב", "לרחוב", "רח", "ברח", "לרח", "כתובת", "הכתובת", "בכתובת", "מיקום", "המיקום"])
-                        n = set(["בשכונת", "לשכונת"])
+                        n = set(["בשכונת", "לשכונת", "שכונת"])
 
                         prev_w = post_words[s_name_w_idx-1][0] \
                             if s_name_w_idx >= 1 else None
@@ -73,37 +106,35 @@ class LocExtractor:
                             if s_name_w_idx + len(s_name_split) < len(post_words) \
                             else None
 
-                        if next_w and next_w.isnumeric() and len(next_w) <= 3:
-                            a = "רחוב!"
-                        elif prev_w and prev_w in s:
-                            a = "רחוב?"
-                        elif prev_w and prev_w in n:
-                            a = "שכונה"
-                        else:
-                            a = None
-
                         if s_name == "דוד" and next_w and\
                                 ("שמש" in next_w or "חשמל" in next_w):
                             continue
 
-                        matches.add((a, s_name, c_name,
-                                     self.neighberhood_by_street.get(
-                                         (c_name, s_name))
-                                     ))
-        matches0 = [("רחוב", m[1], m[2], m[3]) for m in matches if m[0] == "רחוב!"]
-        matches1 = [("רחוב", m[1], m[2], m[3]) for m in matches if m[0] == "רחוב?"]
-        matches2 = [("רחוב", m[1], m[2], m[3]) for m in matches if m[0] == None]
-        matches3 = [("שכונה", m[1], m[2], m[1]) for m in matches if m[0] == "שכונה"]
+                        if is_neighberhood and prev_w and prev_w in n:
+                            matchesN.add(Location(city=c_name,
+                                                  neighberhood=s_name))
+
+                        if not is_street:
+                            continue
+
+                        if next_w and next_w.isnumeric() and len(next_w) <= 3:
+                            matches0.add(Location(city=c_name, street=s_name,
+                                         street_num=int(next_w)))
+                        elif prev_w and prev_w in s:
+                            matches1.add(Location(city=c_name, street=s_name))
+                        else:
+                            matches2.add(Location(city=c_name, street=s_name))
+
         if len(matches0) > 0:
             filtered_matches = matches0
         elif len(matches1) > 0:
             filtered_matches = matches1
-        elif len(matches2) > 0:
+        elif len(matches2) > 0 and len(matchesN) == 0:
             filtered_matches = matches2
-        elif len(matches3) > 0:
-            filtered_matches = matches3
         else:
-            filtered_matches = []
+            filtered_matches = set()
+
+        filtered_matches = filtered_matches.union(matchesN)
 
         # filter by cities
         found_cities = set()
@@ -113,16 +144,19 @@ class LocExtractor:
                 if city_con in post_text:
                     found_cities.add(c)
 
-        street_cities = set([m[2] for m in filtered_matches])
+        street_cities = set([m.city for m in filtered_matches])
         final_cities = found_cities & street_cities
         if len(final_cities) > 0 and len(street_cities) > 0:
-            filtered_matches = [m for m in filtered_matches if m[2] in
-                                found_cities]
+            filtered_matches = set([m for m in filtered_matches if m.city in
+                                    found_cities])
 
         print("----")
         print("Text: %s" % post_text)
-        if len(matches) > 0:
-            print("Matches: %s" % matches)
+        if len(filtered_matches) > 0:
+            print("Matches0: %s" % matches0)
+            print("Matches1: %s" % matches1)
+            print("Matches2: %s" % matches2)
+            print("MatchesN: %s" % matchesN)
             if len(filtered_matches) > 0:
                 print("Filtered matches: %s" % filtered_matches)
         else:
@@ -142,39 +176,7 @@ def find_latest_csv(csv_glob_inp: str):
 if __name__ == "__main__":
     loc_df = pd.read_csv(find_latest_csv("%s/Streets_*.csv" % DATA_DIR))
     posts_df = pd.read_csv(find_latest_csv("%s/Posts_*.csv" % DATA_DIR))
-
-    neighber_df_dict = {'city': [], 'neighberhood': [], 'street': []}
-
-    neighber_giva_df = pd.read_csv("%s/Giva_Neighberhoods.csv" % DATA_DIR)
-    neighber_giva_df['city'] = ["גבעתיים"] * len(neighber_giva_df)
-    neighber_rg_df = pd.read_csv("%s/RG_Neighberhoods.csv" % DATA_DIR)
-    neighber_rg_df['city'] = ["רמת גן"] * len(neighber_rg_df)
-    for __, row in pd.concat([neighber_rg_df, neighber_giva_df]).iterrows():
-        neighber_df_dict['city'].append(normalize_str(row['city']))
-        neighber_df_dict['street'].append(normalize_str(row['street']))
-        neighber_df_dict['neighberhood'].append(normalize_str(row['neighberhood']))
-
-    neighber_df_2008 = pd.read_csv("%s/Israel_statisticalAreas2008_neighborhoods.csv" % DATA_DIR)
-    neighber_df_2008 = neighber_df_2008.fillna("")
-    for __, row in neighber_df_2008.iterrows():
-        city = row['שם יישוב']
-        neighberhood = row['שמות שכונות מרכזיות']
-        if neighberhood == 'אין שם שכונה באזור סטטיסטי זה':
-            continue
-
-        streets = row['שמות רחובות מרכזיים'].split(",")
-        for street in streets:
-            street = street.strip()
-            if len(street) == 0:
-                continue
-
-            neighber_df_dict['city'].append(normalize_str(city))
-            neighber_df_dict['neighberhood'].append(normalize_str(neighberhood))
-            neighber_df_dict['street'].append(normalize_str(street))
-    neighber_df = pd.DataFrame.from_dict(neighber_df_dict)
-
-    posts_df['location'] = posts_df.apply(LocExtractor(loc_df,
-                                                       neighber_df), axis=1)
+    posts_df['location'] = posts_df.apply(LocExtractor(loc_df), axis=1)
 
     print(loc_df.head())
     print(posts_df.head())
