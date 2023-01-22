@@ -4,27 +4,18 @@ from typing import List
 
 import sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, String, Boolean, ForeignKey, BigInteger
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
 
 db = SQLAlchemy()
-
-
-@dataclass
-class FBPost(db.Model):
-    """Local Device table in DB"""
-    __tablename__ = "FBPost"
-    __table_args__ = {'extend_existing': True}
-    post_id: int = Column(Integer, primary_key=True, unique=True,
-                          autoincrement=False, nullable=False)
-    post_text: str = Column(String, nullable=True)
 
 
 @dataclass
 class FBGroup(db.Model):
     __tablename__ = "FBGroup"
     __table_args__ = {'extend_existing': True}
-    group_id: int = Column(Integer, primary_key=True, unique=True,
+    group_id: int = Column(BigInteger, primary_key=True, unique=True,
                            autoincrement=False, nullable=False)
 
     is_private: bool = Column(Boolean, nullable=False)
@@ -44,3 +35,15 @@ class FBGroup(db.Model):
         val = [str(v) for v in val]
         self._city_codes = "|".join(val)
 
+
+@dataclass
+class FBPost(db.Model):
+    """Local Device table in DB"""
+    __tablename__ = "FBPost"
+    __table_args__ = {'extend_existing': True}
+    post_id: int = Column(BigInteger, primary_key=True, unique=True,
+                          autoincrement=False, nullable=False)
+    post_text: str = Column(String, nullable=True)
+
+    group_id: int = Column(BigInteger, ForeignKey("FBGroup.id"))
+    group: FBGroup = relationship("FBGroup", lazy="joined")
