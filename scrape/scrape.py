@@ -1,27 +1,17 @@
 import datetime
 import os
 
+import numpy as np
 import lxml
 import pandas as pd
 import facebook_scraper as f
 import requests
 from lxml import etree
 
-from config import DATA_DIR, MAX_DAYS_BACK, MAX_POSTS
 
-
-def scrape_facebook_posts():
-    os.makedirs(DATA_DIR, exist_ok=True)
-
+def scrape_facebook_posts(group_id: str, max_past_limit=2, max_days_back=100,
+                          max_posts=np.inf):
     f.enable_logging()
-
-    # TLV
-    # group_id = '1738501973091783'   #public
-    # group_id = '101875683484689'    #private
-
-    # Givataym
-    group_id = '1424244737803677'  # public
-    # group_id = '186810449287215'    # public
 
     result_dict = {}
     posts_counter = 0
@@ -32,7 +22,7 @@ def scrape_facebook_posts():
             f.get_posts(group=group_id, options={"allow_extra_requests": False},
                         max_past_limit=2,
                         latest_date=datetime.datetime.now() -
-                                    datetime.timedelta(days=MAX_DAYS_BACK))):
+                                    datetime.timedelta(days=max_days_back))):
         print("---------------------------------------")
         print("[Post_Num] %d" % post_num)
         print("---------------------------------------")
@@ -48,12 +38,19 @@ def scrape_facebook_posts():
             all_keys.add(k)
 
         posts_counter += 1
-        if posts_counter == MAX_POSTS:
+        if posts_counter == max_posts:
             break
 
-    result_df = pd.DataFrame.from_dict(result_dict, orient='columns')
+    return pd.DataFrame.from_dict(result_dict, orient='columns')
+
+
+def scrape_facebook_posts_csv(data_dir, **kwargs):
+    os.makedirs(data_dir, exist_ok=True)
+
+    result_df = scrape_facebook_posts(**kwargs)
+
     basename = datetime.datetime.now().strftime("Posts_%m-%d-%Y_%H-%M-%S")
-    basename = os.path.join(DATA_DIR, basename)
+    basename = os.path.join(data_dir, basename)
     result_df.to_csv('%s.csv' % basename)
     result_df.to_excel('%s.xlsx' % basename)
 
@@ -86,5 +83,17 @@ def scrape_neighberhoods():
 
 
 if __name__ == '__main__':
-    # scrape_facebook_posts()
+    DATA_DIR = "./data"
+    MAX_DAYS_BACK=100
+    MAX_POSTS = np.inf
+
+    # TLV
+    # group_id = '1738501973091783'   #public
+    # group_id = '101875683484689'    #private
+
+    # Givataym
+    group_id = '1424244737803677'  # public
+    # group_id = '186810449287215'    # public
+
+    # scrape_facebook_posts_csv()
     scrape_street_names()

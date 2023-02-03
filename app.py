@@ -24,7 +24,7 @@ if __name__ == "__main__":
     scheduler = APScheduler(app=app)
 
     thread_manage_jobs = Thread(target=thread_manage_jobs,
-                                args=(scheduler, stop_event))
+                                args=(scheduler, stop_event, app.app_context()))
     thread_manage_jobs.start()
 
     app.run(host="0.0.0.0", port=app.config['SERVER_PORT'])

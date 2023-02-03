@@ -45,5 +45,5 @@ class FBPost(db.Model):
                           autoincrement=False, nullable=False)
     post_text: str = Column(String, nullable=True)
 
-    group_id: int = Column(BigInteger, ForeignKey("FBGroup.id"))
+    group_id: int = Column(BigInteger, ForeignKey("FBGroup.group_id"))
     group: FBGroup = relationship("FBGroup", lazy="joined")
