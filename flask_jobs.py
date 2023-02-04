@@ -2,7 +2,6 @@ import logging
 import threading
 import datetime
 
-import numpy as np
 from flask.ctx import AppContext
 from flask_apscheduler import APScheduler
 
@@ -32,29 +31,39 @@ def facebook_scrape_1_iteration(app_ctx: AppContext):
         fb_groups = db.session.query(FBGroup).filter(
             FBGroup.should_scrape == True).all()
 
+        max_past_limit = 5
+
         for fb_group in fb_groups:
             max_days_back = 4 if fb_group.last_scrape_date is None else \
                 ((datetime.datetime.now() -
                  fb_group.fb_group.last_scrape_date).days + 3)
 
-            results_df = scrape.scrape_facebook_posts(
-                fb_group.group_id,
-                max_past_limit=2,
-                max_days_back=max_days_back,
-                max_posts=10
-            )
+            past_limit_hits = 0
 
-            existing_posts = db.session.query(FBPost).filter(
-                FBPost.post_id.in_(set(results_df['post_id']))).all()
+            for post_num, post_json in scrape.scrape_facebook_post_iter(
+                    fb_group.group_id,
+                    max_past_limit=max_past_limit,
+                    max_days_back=max_days_back):
 
-            existing_post_ids = set([p.post_id for p in existing_posts])
+                post_id = int(post_json['post_id'])
+                post_text = post_json['post_text']
 
-            for __, post in results_df.iterrows():
-                post_id = post['post_id']
-                post_text = post['post_text']
+                post_db = db.session.query(FBPost).filter(
+                    FBPost.post_id == post_id).first()
 
-                if post_id in existing_post_ids:
-                    continue
+                if post_db is not None:
+                    # exists already
+                    logging.info("Scraped post[%d]. Already exists" % post_id)
+                    past_limit_hits += 1
+
+                    if past_limit_hits >= max_past_limit:
+                        # no need to scrape this group anymore
+                        logging.info("Max past limit reached, "
+                                     "group[%d] is up to date" %
+                                     fb_group.group_id)
+                        break
+                    else:
+                        continue
 
                 new_post = FBPost(post_id=post_id, post_text=post_text,
                                   group=fb_group)

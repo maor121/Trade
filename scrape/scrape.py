@@ -9,6 +9,20 @@ import requests
 from lxml import etree
 
 
+def scrape_facebook_post_iter(group_id: str,
+                              max_past_limit=2,
+                              max_days_back=100):
+    f.enable_logging()
+
+    for post_num, post in enumerate(
+            f.get_posts(group=group_id, options={"allow_extra_requests": False},
+                        max_past_limit=max_past_limit,
+                        latest_date=datetime.datetime.now() -
+                                    datetime.timedelta(days=max_days_back))):
+
+        yield post_num, post
+
+
 def scrape_facebook_posts(group_id: str, max_past_limit=2, max_days_back=100,
                           max_posts=np.inf):
     f.enable_logging()
@@ -20,7 +34,7 @@ def scrape_facebook_posts(group_id: str, max_past_limit=2, max_days_back=100,
 
     for post_num, post in enumerate(
             f.get_posts(group=group_id, options={"allow_extra_requests": False},
-                        max_past_limit=2,
+                        max_past_limit=max_past_limit,
                         latest_date=datetime.datetime.now() -
                                     datetime.timedelta(days=max_days_back))):
         print("---------------------------------------")
