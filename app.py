@@ -9,7 +9,7 @@ from sqlalchemy import BigInteger
 
 from app_factory import create_app
 from config import RECREATE_DB
-from db.models import db, FBGroup
+from db.models import db, FBGroup, User
 from flask_jobs import thread_manage_jobs
 
 
@@ -40,6 +40,13 @@ def add_facebook_groups(app_ctx: AppContext):
         db.session.commit()
 
 
+def add_users(app_ctx: AppContext):
+    with app_ctx:
+        db.session.add(User(name="Maor", _search_city_codes="6300|8600"))
+
+        db.session.commit()
+
+
 if __name__ == "__main__":
 
     app = create_app()
@@ -52,6 +59,7 @@ if __name__ == "__main__":
         db.create_all()
 
     add_facebook_groups(app.app_context())
+    add_users(app.app_context())
 
     stop_event = threading.Event()
     scheduler = APScheduler(app=app)

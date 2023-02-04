@@ -1,11 +1,12 @@
 import logging
 import threading
 import datetime
+from typing import List
 
 from flask.ctx import AppContext
 from flask_apscheduler import APScheduler
 
-from db.models import db, FBGroup, FBPost
+from db.models import db, FBGroup, FBPost, User
 from scrape import scrape
 
 
@@ -26,6 +27,8 @@ def thread_manage_jobs(scheduler: APScheduler, stop_event: threading.Event,
 
 def facebook_scrape_1_iteration(app_ctx: AppContext):
     logging.info("facebook_scrape_1_iteration")
+
+    new_posts = []
 
     with app_ctx:
         fb_groups = db.session.query(FBGroup).filter(
@@ -70,4 +73,15 @@ def facebook_scrape_1_iteration(app_ctx: AppContext):
 
                 db.session.add(new_post)
 
+                new_posts.append(new_post)
+
             db.session.commit()
+
+    notify_users_on_scrape_end(app_ctx, new_posts)
+
+
+def notify_users_on_scrape_end(app_ctx: AppContext, new_posts: List[FBPost]):
+    with app_ctx:
+        all_users = db.session.query(User).all()
+
+        # for user in all_users:
