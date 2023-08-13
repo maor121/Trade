@@ -1,0 +1,105 @@
+id,ticker_symbol,shortName,id
+0,DAX,Global X DAX Germany ETF,0
+1,^BKX,KBW Nasdaq Bank Index,1
+2,^BXD,DJIA BUY WRITE INDEX,2
+3,^BXM,Buy write Monthly Index,3
+4,^BXN,Cboe NASDAQ-100 BuyWrite Index,4
+5,^BXR,CBOE RUSSELL 2000 BUY WRITE IND,5
+6,^CEX,CHEMICALS INDEX,6
+7,^CLL,CBOE S&P 500 95 110 COLLAR,7
+8,^CXU,CBOE U.S.-Europe-Japan Basket I,8
+9,^DJCIAGC,Dow Jones Commodity Index Agric,9
+10,^DJCICC,Dow Jones Commodity Index Cocoa,10
+11,^DJCIEN,Dow Jones Commodity Index Energ,11
+12,^DJCIGC,Dow Jones Commodity Index Gold,12
+13,^DJCIGR,Dow Jones Commodity Index Grain,13
+14,^DJCIIK,Dow Jones Commodity Index Nicke,14
+15,^DJCIKC,Dow Jones Commodity Index Coffe,15
+16,^DJCISB,Dow Jones Commodity Index Sugar,16
+17,^DJCISI,Dow Jones Commodity Index Silve,17
+18,^DJINET,Dow Jones Internet Composite In,18
+19,^DJI,Dow Jones Industrial Average,19
+20,^DJR,DOW JONES EQUITY REIT INDEX,20
+21,^DJTTR,Dow Jones Transportation Averag,21
+22,^DJX,1.100 DOW JONES INDUSTRIAL AVER,22
+23,^DRG,NYSE ARCA PHARMACEUTICAL INDEX,23
+24,^DUX,Dow Jones Utility Average Index,24
+25,^DVS,S&P 500 DIVIDEND INDEX,25
+26,^DWCF,Dow Jones U.S. Total Stock Mark,26
+27,^DWCPF,Dow Jones U.S. Completion Total,27
+28,^DWLG,Dow Jones U.S. Large-Cap Growth,28
+29,^DWLV,Dow Jones U.S. Large-Cap Value ,29
+30,^DXL,Cboe Jumbo DJX Index,30
+31,^DXY,UNK,31
+32,^EVZ,CBOE Euro currency Volatility I,32
+33,^FVX,Treasury Yield 5 Years,33
+34,^GVZ,CBOE Gold Volatitity Index,34
+35,^HGX,PHLX Housing Sector,35
+36,^IXIC,NASDAQ Composite,36
+37,^LOVOL,CBOE Low Volatility Index,37
+38,^MID,S&P MID CAP 400 INDEX,38
+39,^MRUT,Mini Russell 2000 Index,39
+40,^NDX,NASDAQ 100,40
+41,^NQX,NASDAQ-100 Reduced Value Index,41
+42,^NYA,NYSE COMPOSITE (DJ),42
+43,^NYFANG,NYSE FANG+TM Index,43
+44,^NYXBT,NYSE Bitcoin Index,44
+45,^OEX,S&P 100 INDEX,45
+46,^OSX,PHLX Oil Service Sector,46
+47,^OVX,CBOE Crude Oil Volatility Index,47
+48,^PUT,CBOE S&P 500 PutWrite Index,48
+49,^REIT,ALPS ETF TRUST,49
+50,^RUA,Russell 3000,50
+51,^RUI,Russell 1000,51
+52,^RUT,Russell 2000,52
+53,^RVX,CBOE RUSSELL 2000 VOLATILITY IN,53
+54,^RXM,CBOE S&P 500 Risk Reversal Inde,54
+55,^SET,S&P 500 INDEX OPEN FLEX SETTLEM,55
+56,^SMILE,The CBOE S&P 500 Smile Index,56
+57,^SP500LVOL,S&P 500 Low Volatility Index,57
+58,^SP600,S&P 600,58
+59,^SPEN,CBOE S&P 500 Enhanced Growth Ba,59
+60,^SPGSCI,S&P GSCI Index,60
+61,^SPMPG,S&P400. CITIGROUP PURE  GROWTH,61
+62,^SPMPV,S&P400. CITIGROUP PURE VALUE,62
+63,^SPRI,CBOE S&P 500 Range Bound Premiu,63
+64,^SPRO,CBOE S&P 500 Buffer Protect Ind,64
+65,^SPSIBI,S&P Biotechnology Select Indust,65
+66,^SPSPG,S&P600. CITI GROUP PURE GROWTH,66
+67,^SPSPV,S&P600. CITI GROUP PURE VALUE,67
+68,^SPTMI,S&P TMI,68
+69,^SPXPG,S&P 500. CITIGROUP PURE GROWTH,69
+70,^SPXPV,S&P 500.CITIGROUP PURE VALUE,70
+71,^SPX,S&P 500 INDEX,71
+72,^TNX,CBOE Interest Rate 10 Year T No,72
+73,^TYX,Treasury Yield 30 Years,73
+74,^UTIL,UNK,74
+75,^UTY,PHLX Utility Sector,75
+76,^VIF,CBOE Far-term VIX Index,76
+77,^VIN,CBOE Near-term VIX Index,77
+78,^VIX1Y,Cboe S&P 500 One Year Volatilit,78
+79,^VIX3M,CBOE S&P 500 3-Month Volatility,79
+80,^VIX6M,CBOE S&P 500 6 Month Volatility,80
+81,^VIX9D,CBOE S&P 500 9 Day Volatility I,81
+82,^VIX,CBOE Volatility Index,82
+83,^VOLI,Nations VolDex,83
+84,^VPD,Cboe VIX Premium Strategy Index,84
+85,^VPN,GLOBAL X FDS,85
+86,^VVIX,CBOE VIX VOLATILITY INDEX,86
+87,^VWA,CBOE Market Volatility SPX Offe,87
+88,^VWB,CBOE Market Volatility SPX Bid ,88
+89,^VXD,DJIA VOLATILITY,89
+90,^VXN,CBOE NASDAQ 100 Voltility,90
+91,^VXTH,CBOE VIX Tail Hedge Index,91
+92,^VXTLT,CBOE 20+ Year Treasury Bond ETF,92
+93,^W5000,Wilshire 5000 Total Market Inde,93
+94,^WPUT,CBOE S&P 500 One-Week PutWrite ,94
+95,^XAU,PHLX GOLD  and  SILVER SECTOR I,95
+96,^XAX,NYSE AMEX COMPOSITE INDEX,96
+97,^XDA,Australian WCO,97
+98,^XDB,British Pounds WCO,98
+99,^XEO,S&P 100 INDEX (EUROPEAN STYLE),99
+100,^XMI,NYSE ARCA MAJOR MARKET INDEX,100
+101,^XND,Nasdaq-100 Micro Index,101
+102,^XSP,S&P 500 MINI SPX OPTIONS INDEX,102
+103,^XSR,S&P 500 Settlement Reduced,103
