@@ -6,7 +6,7 @@ import sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, String, Boolean, ForeignKey, BigInteger, Integer
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 
 db = SQLAlchemy()
 
@@ -45,7 +45,7 @@ class FBPost(db.Model):
     post_text: str = Column(String, nullable=True)
 
     group_id: int = Column(BigInteger, ForeignKey("FBGroup.group_id"))
-    group: FBGroup = relationship("FBGroup", lazy="joined")
+    group: Mapped[FBGroup] = relationship("FBGroup", lazy="joined")
 
 
 @dataclass
@@ -82,5 +82,5 @@ class UserFBPosts(db.Model):
     is_relevant: bool = Column(Boolean, nullable=False)
     is_notified: bool = Column(Boolean, nullable=False)
 
-    user: User = relationship("User", lazy="joined")
-    post: FBPost = relationship("FBPost", lazy="joined")
+    user: Mapped[User] = relationship("User", lazy="joined")
+    post: Mapped[FBPost] = relationship("FBPost", lazy="joined")

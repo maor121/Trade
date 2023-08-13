@@ -2,11 +2,8 @@ import datetime
 import os
 
 import numpy as np
-import lxml
 import pandas as pd
 import facebook_scraper as f
-import requests
-from lxml import etree
 
 
 def scrape_facebook_post_iter(group_id: str,
