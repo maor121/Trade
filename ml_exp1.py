@@ -150,7 +150,9 @@ class FollowingMonthsDataset(Dataset):
         delta0 = three_months[1] - three_months[0]
         delta1 = three_months[2] - three_months[1]
 
-        return ({'month_i': three_months[1].astype(np.float32), 'month_i_delta': delta0.astype(np.float32)},
+        return ({
+                    'date_i': self.data_dict['dates'][idx+1],
+                    'month_i': three_months[1].astype(np.float32), 'month_i_delta': delta0.astype(np.float32)},
                 delta1.astype(np.float32))
 
     def __len__(self):
@@ -162,26 +164,12 @@ def loss_per_stock(month_i: torch.Tensor, output: torch.Tensor, label: torch.Ten
     error = torch.abs(label_normed - output_normed)
     return error
 
-
-if __name__ == "__main__":
-    # close_monthly()
-    common_stocks_filtered = (
-        filter_stocks(datetime.datetime(2007, 6, 1), datetime.datetime(2023, 8, 10)))
-
-    train_dict, val_dict, id_to_ticker = build_data_points(common_stocks_filtered)
-
-    # print(val_dict)
-
+def train_model(train_loader, val_loader, id_to_ticker):
     model = nn.Sequential(OrderedDict([
         ('dense1', nn.Linear(len(id_to_ticker), len(id_to_ticker))),
-        ('act1', nn.ReLU())
+        # ('act1', nn.ReLU())
     ]))
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-    train_loader = DataLoader(FollowingMonthsDataset(train_dict), batch_size=5, shuffle=True)
-    val_loader = DataLoader(FollowingMonthsDataset(val_dict), batch_size=5, shuffle=True)
-
-    epoch_count = 150
 
     iter_counter = 0
     for epoch in range(epoch_count):
@@ -212,4 +200,76 @@ if __name__ == "__main__":
                     print("Train Loss: %.3f, val_loss: %.3f" % (loss_avg,
                                                                 np.mean(np.array(val_loss_avg_list))))
 
+    return model
 
+def evaluate_model(model, val_loader, id_to_ticker):
+    pred_df_dict = {'date': []}
+    with torch.no_grad():
+        model.eval()
+        for val_batch in val_loader:
+            pred_next_month_delta = model(val_batch[0]['month_i_delta'])
+            next_month_delta = val_batch[1]
+            val_loss_arr = loss_per_stock(val_batch[0]['month_i'], pred_next_month_delta, next_month_delta)
+            # val_loss_avg = torch.mean(val_loss_arr)
+
+            val_x_batch, val_y_batch = val_batch
+            batch_len = len(val_y_batch)
+            for ex_i in range(batch_len):
+                pred_df_dict['date'].append(val_x_batch['date_i'][ex_i].numpy())
+                for ticker_id in range(len(id_to_ticker)):
+                    ticker = id_to_ticker[ticker_id]
+                    symbol = common_stocks_filtered[common_stocks_filtered["ticker"] == ticker]["symbol"].iloc[0]
+                    if symbol not in pred_df_dict:
+                        pred_df_dict[symbol] = []
+                        pred_df_dict[symbol + "_next"] = []
+                        pred_df_dict[symbol + "_pred"] = []
+                        pred_df_dict[symbol + "_loss"] = []
+                    symbol_val = val_x_batch["month_i"][ex_i][ticker_id].item()
+                    symbol_next_val = symbol_val + val_y_batch[ex_i][ticker_id].item()
+                    symbol_pred = symbol_val + pred_next_month_delta[ex_i][ticker_id].item()
+
+                    pred_df_dict[symbol].append(symbol_val)
+                    pred_df_dict[symbol + "_next"].append(symbol_next_val / symbol_val - 1)
+                    pred_df_dict[symbol + "_pred"].append(symbol_pred / symbol_val - 1)
+                    pred_df_dict[symbol + "_loss"].append(val_loss_arr[ex_i][ticker_id].item())
+
+            # val_loss_avg_list.append(val_loss_avg.detach().numpy())
+    pred_df = pd.DataFrame.from_dict(pred_df_dict)
+    # pred_df["date"] = pd.to_datetime(pred_df["date"])
+    # pred_df = pred_df.sort_values("date")
+    pred_df.to_csv("pred.csv", index=False)
+
+if __name__ == "__main__":
+    # close_monthly()
+    common_stocks_filtered = (
+        filter_stocks(datetime.datetime(2001, 1, 1), datetime.datetime(2023, 8, 10)))
+
+    train_dict, val_dict, id_to_ticker = build_data_points(common_stocks_filtered)
+
+    # print(val_dict)
+
+    train_dataset = FollowingMonthsDataset(train_dict)
+    train_loader = DataLoader(train_dataset, batch_size=5, shuffle=True)
+    val_dataset = FollowingMonthsDataset(val_dict)
+    val_loader = DataLoader(val_dataset, batch_size=5, shuffle=True)
+
+    epoch_count = 400
+
+    should_train_model = True
+    if should_train_model:
+        model = train_model(train_loader, val_loader, id_to_ticker)
+        torch.save(model, "model.pt")
+    else:
+        model = torch.load("model.pt")
+
+    should_eval_model = True
+    if should_eval_model:
+        evaluate_model(model, val_loader, id_to_ticker)
+
+    pred_df = pd.read_csv("pred.csv")
+    loss_cols = [l for l in pred_df.columns if "_loss" in l]
+    pred_loss_df = pred_df[loss_cols].mean().sort_values()
+    print(pred_loss_df)
+
+    # for param in model.parameters():
+    #     print(param.data)
