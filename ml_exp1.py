@@ -1,6 +1,13 @@
 import datetime
+from collections import OrderedDict
+from typing import Dict
 
+import numpy as np
 import pandas as pd
+import torch
+from torch import nn
+from torch.utils.data import Dataset, DataLoader
+
 
 def close_monthly():
     tickers_df = pd.read_csv("data/investing_com/tickers.csv")
@@ -65,6 +72,7 @@ def filter_stocks(start_date: datetime, end_date: datetime):
     common_stocks_final = stocks_monthly[stocks_monthly["ticker"].isin(common_stocks_filtered["ticker"])]
     return common_stocks_final
 
+
 def build_data_points(common_stocks_filtered: pd.DataFrame):
     common_stocks_filtered = common_stocks_filtered.sort_values("date")
 
@@ -97,13 +105,111 @@ def build_data_points(common_stocks_filtered: pd.DataFrame):
     tickers = common_stocks_filtered["ticker"].unique()
     # print("Tickers: %s" % tickers)
     ticker_to_id = {}
+    id_to_ticker = {}
     for t in tickers:
-        ticker_to_id[t] = len(ticker_to_id)
+        new_id = len(ticker_to_id)
+        ticker_to_id[t] = new_id
+        id_to_ticker[new_id] = t
     print(ticker_to_id)
 
+    data_dict_np = {}
 
-# close_monthly()
-common_stocks_filtered = (
-    filter_stocks(datetime.datetime(2007, 6, 1), datetime.datetime(2023, 8, 10)))
+    for date_key in date_keys_sorted:
+        date_data_dict = data_dict[date_key]
 
-build_data_points(common_stocks_filtered)
+        date_np = np.array([np.nan]*len(tickers))
+        for i in range(len(tickers)):
+            ticker = id_to_ticker[i]
+            val = date_data_dict[ticker]
+            date_np[i] = val
+        data_dict_np[date_key] = date_np
+
+    print(data_dict_np)
+    train_np = np.array([
+        data_dict_np[date_key]
+        for date_key in date_keys_train])
+    train_dict = {
+        'dates': np.array(date_keys_train), 'val': train_np}
+    val_np = np.array([
+        data_dict_np[date_key]
+        for date_key in date_keys_val])
+    val_dict = {
+        'dates': np.array(date_keys_val), 'val': val_np
+    }
+
+    return train_dict, val_dict, id_to_ticker
+
+
+class FollowingMonthsDataset(Dataset):
+    def __init__(self, data_dict: Dict[str, np.ndarray]):
+        self.pairs_count = len(data_dict['dates']) - 2
+        self.data_dict = data_dict
+
+    def __getitem__(self, idx):
+        three_months = self.data_dict['val'][idx:idx+3]
+        delta0 = three_months[1] - three_months[0]
+        delta1 = three_months[2] - three_months[1]
+
+        return ({'month_i': three_months[1].astype(np.float32), 'month_i_delta': delta0.astype(np.float32)},
+                delta1.astype(np.float32))
+
+    def __len__(self):
+        return self.pairs_count
+
+def loss_per_stock(month_i: torch.Tensor, output: torch.Tensor, label: torch.Tensor):
+    output_normed = output / month_i
+    label_normed = label / month_i
+    error = torch.abs(label_normed - output_normed)
+    return error
+
+
+if __name__ == "__main__":
+    # close_monthly()
+    common_stocks_filtered = (
+        filter_stocks(datetime.datetime(2007, 6, 1), datetime.datetime(2023, 8, 10)))
+
+    train_dict, val_dict, id_to_ticker = build_data_points(common_stocks_filtered)
+
+    # print(val_dict)
+
+    model = nn.Sequential(OrderedDict([
+        ('dense1', nn.Linear(len(id_to_ticker), len(id_to_ticker))),
+        ('act1', nn.ReLU())
+    ]))
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    train_loader = DataLoader(FollowingMonthsDataset(train_dict), batch_size=5, shuffle=True)
+    val_loader = DataLoader(FollowingMonthsDataset(val_dict), batch_size=5, shuffle=True)
+
+    epoch_count = 150
+
+    iter_counter = 0
+    for epoch in range(epoch_count):
+        for train_batch in train_loader:
+            model.train()
+            iter_counter += 1
+
+            pred_next_month_delta = model(train_batch[0]['month_i_delta'])
+            next_month_delta = train_batch[1]
+            loss_arr = loss_per_stock(train_batch[0]['month_i'], pred_next_month_delta, next_month_delta)
+            loss_avg = torch.mean(loss_arr)
+            optimizer.zero_grad()
+            loss_avg.backward()
+            optimizer.step()
+
+            val_loss_avg_list = []
+            if iter_counter % 2 == 0:
+                with torch.no_grad():
+                    model.eval()
+                    for val_batch in val_loader:
+                        pred_next_month_delta = model(val_batch[0]['month_i_delta'])
+                        next_month_delta = val_batch[1]
+                        val_loss_arr = loss_per_stock(val_batch[0]['month_i'], pred_next_month_delta, next_month_delta)
+                        val_loss_avg = torch.mean(val_loss_arr)
+
+                        val_loss_avg_list.append(val_loss_avg.detach().numpy())
+
+                    print("Train Loss: %.3f, val_loss: %.3f" % (loss_avg,
+                                                                np.mean(np.array(val_loss_avg_list))))
+
+
