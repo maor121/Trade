@@ -167,7 +167,8 @@ def loss_per_stock(month_i: torch.Tensor, output: torch.Tensor, label: torch.Ten
 def train_model(train_loader, val_loader, id_to_ticker):
     model = nn.Sequential(OrderedDict([
         ('dense1', nn.Linear(len(id_to_ticker), len(id_to_ticker))),
-        # ('act1', nn.ReLU())
+        # ('sigmoid', nn.ReLU()),
+        # ('dense2', nn.Linear(len(id_to_ticker), len(id_to_ticker))),
     ]))
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
@@ -223,15 +224,20 @@ def evaluate_model(model, val_loader, id_to_ticker):
                         pred_df_dict[symbol] = []
                         pred_df_dict[symbol + "_next"] = []
                         pred_df_dict[symbol + "_pred"] = []
-                        pred_df_dict[symbol + "_loss"] = []
+                        # pred_df_dict[symbol + "_loss"] = []
+                        pred_df_dict[symbol + "_error"] = []
                     symbol_val = val_x_batch["month_i"][ex_i][ticker_id].item()
                     symbol_next_val = symbol_val + val_y_batch[ex_i][ticker_id].item()
                     symbol_pred = symbol_val + pred_next_month_delta[ex_i][ticker_id].item()
 
                     pred_df_dict[symbol].append(symbol_val)
-                    pred_df_dict[symbol + "_next"].append(symbol_next_val / symbol_val - 1)
-                    pred_df_dict[symbol + "_pred"].append(symbol_pred / symbol_val - 1)
-                    pred_df_dict[symbol + "_loss"].append(val_loss_arr[ex_i][ticker_id].item())
+                    next_prec_change = symbol_next_val / symbol_val - 1
+                    pred_prec_change = symbol_pred / symbol_val - 1
+                    pred_loss = val_loss_arr[ex_i][ticker_id].item()
+                    pred_df_dict[symbol + "_next"].append(next_prec_change)
+                    pred_df_dict[symbol + "_pred"].append(pred_prec_change)
+                    # pred_df_dict[symbol + "_loss"].append(pred_loss)
+                    pred_df_dict[symbol + "_error"].append(abs(pred_prec_change - next_prec_change))
 
             # val_loss_avg_list.append(val_loss_avg.detach().numpy())
     pred_df = pd.DataFrame.from_dict(pred_df_dict)
@@ -242,18 +248,18 @@ def evaluate_model(model, val_loader, id_to_ticker):
 if __name__ == "__main__":
     # close_monthly()
     common_stocks_filtered = (
-        filter_stocks(datetime.datetime(2001, 1, 1), datetime.datetime(2023, 8, 10)))
+        filter_stocks(datetime.datetime(1995, 1, 1), datetime.datetime(2023, 8, 10)))
 
     train_dict, val_dict, id_to_ticker = build_data_points(common_stocks_filtered)
 
     # print(val_dict)
 
     train_dataset = FollowingMonthsDataset(train_dict)
-    train_loader = DataLoader(train_dataset, batch_size=5, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=20, shuffle=True)
     val_dataset = FollowingMonthsDataset(val_dict)
-    val_loader = DataLoader(val_dataset, batch_size=5, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=20, shuffle=True)
 
-    epoch_count = 400
+    epoch_count = 200
 
     should_train_model = True
     if should_train_model:
@@ -267,8 +273,10 @@ if __name__ == "__main__":
         evaluate_model(model, val_loader, id_to_ticker)
 
     pred_df = pd.read_csv("pred.csv")
-    loss_cols = [l for l in pred_df.columns if "_loss" in l]
+    loss_cols = [l for l in pred_df.columns if "_error" in l]
     pred_loss_df = pred_df[loss_cols].mean().sort_values()
+    print(pred_loss_df)
+    pred_loss_df = pred_df[loss_cols].std().sort_values()
     print(pred_loss_df)
 
     # for param in model.parameters():
